@@ -8,8 +8,7 @@ function playMusic(t) {
   if (!musicOn) return;
   if (curTrack === t && audio && !audio.paused) return;
   if (audio) { audio.pause(); audio.currentTime = 0; }
-  curTrack = t;
-  if (!TRACKS[t]) return;
+  curTrack = t; if (!TRACKS[t]) return;
   audio = new Audio(TRACKS[t]); audio.loop = true; audio.volume = 0.2;
   audio.play().catch(() => {});
 }
@@ -30,9 +29,9 @@ document.addEventListener('keydown', startMusicOnce);
 
 // ─── DATA ────────────────────────────────────────────────────
 const ALL_AVATARS = ['🎴','🃏','🎲','🎯','🎪','🎨','🎭','🎬','🎮','🕹️','🎸','🎺','🎻','🥁','🎹','🌈','⭐','🔥','💎','👑','🦊','🐺','🐉','🦋','🌙','⚡','🍀','🎃','👾','🤖'];
-
-const COLOR_BG = { red:'#e53e3e', green:'#2ecc40', blue:'#0084ff', yellow:'#ffd700', wild:'linear-gradient(135deg,#e53e3e,#ffd700,#2ecc40,#0084ff)' };
-const COLOR_NAME = { red:'Rouge 🔴', green:'Vert 🟢', blue:'Bleu 🔵', yellow:'Jaune 🟡' };
+const COLOR_BG = { red:'#ff3b3b', green:'#2ecc40', blue:'#2196f3', yellow:'#ffd700' };
+const COLOR_NAME = { red:'Rouge', green:'Vert', blue:'Bleu', yellow:'Jaune' };
+const COLOR_EMOJI = { red:'🔴', green:'🟢', blue:'🔵', yellow:'🟡' };
 
 function cardLabel(card) {
   if (!card) return '';
@@ -49,16 +48,14 @@ let token = localStorage.getItem('uno_token');
 let myUsername = localStorage.getItem('uno_user') || '';
 let myAvatar = localStorage.getItem('uno_avatar') || '🎴';
 let currentRoom = null, gs = null;
-let socket = null, mySid = null;
-let selectedAv = '🎴';
-let pendingCard = null; // card waiting for color choice
-let endShown = false;
+let socket = null;
+let selectedAv = '🎴', pendingCard = null, endShown = false;
 
 // ─── INIT ─────────────────────────────────────────────────────
 function init() {
   buildAvPicker();
   socket = io();
-  socket.on('connect', () => { mySid = socket.id; if (token) socket.emit('auth', { token }); });
+  socket.on('connect', () => { if (token) socket.emit('auth', { token }); });
   socket.on('auth_ok', ({ username, avatar }) => {
     myUsername = username; myAvatar = avatar || '🎴';
     localStorage.setItem('uno_user', username); localStorage.setItem('uno_avatar', myAvatar);
@@ -75,10 +72,8 @@ function init() {
   });
   socket.on('state', st => onState(st));
   socket.on('chat_msg', m => appendChat(m));
-
   if (token) socket.emit('auth', { token });
   else show('s-auth');
-
   document.getElementById('chat-in').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
   const rci = document.getElementById('room-chat-in');
   if (rci) rci.addEventListener('keydown', e => { if (e.key === 'Enter') sendRoomChat(); });
@@ -132,7 +127,7 @@ function switchTab(t) {
   document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active',(i===0&&t==='login')||(i===1&&t==='register')));
   document.getElementById('t-login').classList.toggle('active', t==='login');
   document.getElementById('t-register').classList.toggle('active', t==='register');
-  setErr('auth-err', '');
+  setErr('auth-err','');
 }
 
 // ─── ROOM ──────────────────────────────────────────────────────
@@ -143,8 +138,15 @@ function joinRoom() {
   if (!code) return;
   socket.emit('join_room', { token, code });
 }
-function leaveRoom() { socket.emit('leave_room', { token, code: currentRoom }); currentRoom = null; show('s-menu'); playMusic('lobby'); }
-function copyCode() { navigator.clipboard?.writeText(currentRoom); const b=document.querySelector('.copy-btn'); b.textContent='✅'; setTimeout(()=>b.textContent='📋',1400); }
+function leaveRoom() {
+  socket.emit('leave_room', { token, code: currentRoom });
+  currentRoom = null; show('s-menu'); playMusic('lobby');
+}
+function copyCode() {
+  navigator.clipboard?.writeText(currentRoom);
+  const b = document.querySelector('.copy-btn');
+  b.textContent = '✅'; setTimeout(() => b.textContent = '📋', 1400);
+}
 function startGame() { socket.emit('start_game', { token, code: currentRoom }); }
 function sendRoomChat() {
   const el = document.getElementById('room-chat-in');
@@ -153,34 +155,41 @@ function sendRoomChat() {
 }
 
 // ─── STATE ─────────────────────────────────────────────────────
+function getMySid(players) {
+  if (!socket) return null;
+  if (players[socket.id]) return socket.id;
+  return Object.keys(players).find(k => players[k].username === myUsername) || null;
+}
+
 function onState(st) {
   gs = st;
-  mySid = mySid || socket.id;
-  const sid = gs.players[mySid] ? mySid : Object.keys(gs.players).find(k => gs.players[k].username === myUsername);
-
+  const sid = getMySid(st.players);
   if (st.phase === 'lobby') { show('s-room'); renderRoom(st, sid); return; }
   show('s-game'); playMusic('game'); renderGame(st, sid);
-
   if (st.phase === 'finished' && !endShown) {
     endShown = true;
     const isWin = st.winner === myUsername;
-    showEnd(isWin ? '🏆 VICTOIRE !' : '😢 Défaite...', isWin ? `Tu as gagné ! Bravo champion ! 🎉` : `${st.winner} a gagné cette partie.`, isWin ? '🏆' : '🃏', gs.players[sid]?.isHost);
+    showEnd(
+      isWin ? '🏆 VICTOIRE !' : '😢 Défaite...',
+      isWin ? 'Tu as gagné ! Bravo champion ! 🎉' : `${st.winner} a gagné cette partie.`,
+      isWin ? '🏆' : '🃏',
+      st.players[sid]?.isHost
+    );
   }
   if (st.phase !== 'finished') endShown = false;
 }
 
 function renderRoom(st, sid) {
-  const { players, playerOrder } = st;
-  const allPlayers = playerOrder?.length ? playerOrder.map(s => [s, players[s]]).filter(([,p])=>p) : Object.entries(players);
+  const allPlayers = Object.entries(st.players);
   document.getElementById('players-wrap').innerHTML = allPlayers.map(([,p]) =>
     `<div class="p-card ${p.isHost?'host':''}">
       <span class="p-av">${p.avatar||'🎴'}</span>
       <div class="p-nm">${p.username}</div>
       ${p.isHost?'<span class="p-badge">HÔTE</span>':''}
     </div>`).join('');
-  const cnt = Object.keys(players).length;
+  const cnt = allPlayers.length;
   document.getElementById('player-count').textContent = `${cnt}/8 joueurs`;
-  const isHost = players[sid]?.isHost;
+  const isHost = st.players[sid]?.isHost;
   const btn = document.getElementById('start-btn');
   btn.style.display = isHost ? 'block' : 'none';
   btn.textContent = cnt < 2 ? `🔒 Minimum 2 joueurs (${cnt}/2)` : '🎴 Lancer la partie !';
@@ -189,43 +198,61 @@ function renderRoom(st, sid) {
 
 function renderGame(st, sid) {
   const { players, playerOrder, topCard, currentColor, currentPlayer, direction, drawPending, deckCount, myHand, log } = st;
-  const me = players[sid];
   const isMyTurn = currentPlayer === sid;
 
-  // Header info
-  document.getElementById('g-direction').textContent = direction === 1 ? '↻ Sens normal' : '↺ Sens inversé';
-  const ci = document.getElementById('g-color-indicator');
-  ci.innerHTML = currentColor ? `<span style="display:inline-flex;align-items:center;gap:.3rem"><span style="width:18px;height:18px;border-radius:50%;background:${COLOR_BG[currentColor] || '#888'};display:inline-block;border:2px solid rgba(255,255,255,.5)"></span>${COLOR_NAME[currentColor]||currentColor}</span>` : '';
+  // Color banner
+  const dot = document.getElementById('g-color-dot');
+  const colorName = document.getElementById('g-color-name');
+  dot.className = 'color-dot ' + (currentColor || '');
+  colorName.textContent = currentColor ? `${COLOR_EMOJI[currentColor]||''} ${COLOR_NAME[currentColor]||currentColor}` : '---';
 
-  const dp = document.getElementById('g-draw-pending');
-  if (drawPending > 0) { dp.style.display='inline'; dp.textContent = `⚠️ +${drawPending} à piocher !`; dp.style.color='#ff6b6b'; }
-  else dp.style.display = 'none';
+  // Draw alert
+  const da = document.getElementById('g-draw-alert');
+  const dn = document.getElementById('g-draw-num');
+  if (drawPending > 0) { da.classList.remove('hidden'); dn.textContent = `+${drawPending}`; }
+  else da.classList.add('hidden');
 
-  // Turn indicator
-  const ti = document.getElementById('turn-indicator');
-  if (isMyTurn) { ti.textContent = '🎯 C\'est TON TOUR !'; ti.style.color='#ffd700'; ti.style.animation='unoPulse 1s infinite'; }
-  else { const cur = players[currentPlayer]; ti.textContent = `⏳ Tour de ${cur?.username||'?'}`; ti.style.color='rgba(255,255,255,.7)'; ti.style.animation='none'; }
+  // Direction
+  document.getElementById('g-direction').textContent = direction === 1 ? '↻ Normal' : '↺ Inversé';
 
-  // Deck & Discard
+  // Deck
   document.getElementById('deck-count').textContent = `${deckCount} cartes`;
-  const dp2 = document.getElementById('discard-pile');
+
+  // Discard pile
+  const dp = document.getElementById('discard-pile');
+  const dl = document.getElementById('discard-label');
   if (topCard) {
-    dp2.style.background = topCard.color === 'wild' ? COLOR_BG.wild : (COLOR_BG[currentColor] || COLOR_BG[topCard.color]);
-    dp2.innerHTML = `<span style="font-family:'Fredoka One';font-size:1.6rem;color:${topCard.color==='yellow'?'#1a1a1a':'#fff'};text-shadow:0 2px 4px rgba(0,0,0,.5)">${cardLabel(topCard)}</span>`;
+    const bgColor = topCard.color === 'wild' ? 'conic-gradient(#ff3b3b 0deg 90deg,#ffd700 90deg 180deg,#2ecc40 180deg 270deg,#2196f3 270deg 360deg)' : COLOR_BG[currentColor] || COLOR_BG[topCard.color] || '#555';
+    dp.style.background = bgColor;
+    const isDark = currentColor === 'yellow';
+    dp.innerHTML = `<span class="discard-value${isDark?' dark':''}">${cardLabel(topCard)}</span>`;
+    dl.textContent = topCard.color !== 'wild' ? `${COLOR_EMOJI[currentColor]||''} ${COLOR_NAME[currentColor]||''}` : '🌈 Joker';
+  }
+
+  // Turn bar
+  const tb = document.getElementById('turn-bar');
+  if (isMyTurn) {
+    tb.textContent = '🎯 C\'est TON TOUR !';
+    tb.className = 'turn-bar my-turn';
+  } else {
+    const cur = players[currentPlayer];
+    tb.textContent = `⏳ Tour de ${cur?.avatar||''} ${cur?.username||'?'}`;
+    tb.className = 'turn-bar';
   }
 
   // Other players
   const op = document.getElementById('other-players');
   const others = playerOrder.filter(s => s !== sid);
   op.innerHTML = others.map(s => {
-    const p = players[s];
-    if (!p) return '';
+    const p = players[s]; if (!p) return '';
     const isCur = s === currentPlayer;
+    const miniCards = Math.min(p.handCount, 7);
+    const cardIcons = Array.from({length:miniCards}, () => '🃏').join('');
     return `<div class="opp-card ${isCur?'current-turn':''}">
-      ${p.saidUno&&p.handCount===1?'<div class="opp-uno">UNO!</div>':''}
+      ${p.saidUno&&p.handCount===1?'<div class="opp-uno-badge">UNO!</div>':''}
       <div class="opp-av">${p.avatar||'🎴'}</div>
       <div class="opp-nm">${p.username}</div>
-      <div class="opp-cards">🃏 ${p.handCount} carte${p.handCount!==1?'s':''}</div>
+      <div class="opp-cards">${cardIcons} <strong>${p.handCount}</strong></div>
       ${p.handCount===1&&!p.saidUno?`<button class="challenge-btn" onclick="challengeUno('${s}')">⚠️ UNO raté !</button>`:''}
     </div>`;
   }).join('');
@@ -234,16 +261,17 @@ function renderGame(st, sid) {
   document.getElementById('hand-count').textContent = myHand?.length || 0;
   const handEl = document.getElementById('my-hand');
   if (myHand && myHand.length > 0) {
-    const topC = topCard;
     handEl.innerHTML = myHand.map((card, i) => {
-      const playable = isMyTurn && canPlayCard(card, topC, currentColor, drawPending);
-      return `<div class="uno-card ${card.color} ${playable?'playable':'not-playable'}" onclick="${playable?`playCard(${i})`:''}" title="${playable?'Jouable':'Non jouable'}">
+      const playable = isMyTurn && canPlayCard(card, topCard, currentColor, drawPending);
+      return `<div class="uno-card ${card.color} ${playable?'playable':'not-playable'}"
+        onclick="${playable?`playCard(${i})`:''}"
+        title="${playable?'✅ Jouable':'❌ Non jouable'}">
         <span class="cs">${cardLabel(card)}</span>
         <span class="cv">${cardLabel(card)}</span>
       </div>`;
     }).join('');
   } else {
-    handEl.innerHTML = '<p style="color:var(--muted);font-size:.8rem;text-align:center">Aucune carte</p>';
+    handEl.innerHTML = '<p style="color:var(--muted);font-size:.8rem;margin:auto">Aucune carte</p>';
   }
 
   // Log
@@ -261,7 +289,7 @@ function canPlayCard(card, topCard, currentColor, drawPending) {
   return false;
 }
 
-// ─── GAME ACTIONS ──────────────────────────────────────────────
+// ─── ACTIONS ──────────────────────────────────────────────────
 function playCard(cardIdx) {
   if (!gs) return;
   const card = gs.myHand?.[cardIdx];
@@ -273,7 +301,6 @@ function playCard(cardIdx) {
     socket.emit('play_card', { token, code: currentRoom, cardIdx });
   }
 }
-
 function chooseColor(color) {
   document.getElementById('color-picker').classList.add('hidden');
   if (pendingCard !== null) {
@@ -281,14 +308,12 @@ function chooseColor(color) {
     pendingCard = null;
   }
 }
-
 function drawCard() {
   if (!gs) return;
-  const sid = gs.players[mySid] ? mySid : Object.keys(gs.players).find(k => gs.players[k].username === myUsername);
+  const sid = getMySid(gs.players);
   if (gs.currentPlayer !== sid) return;
   socket.emit('draw_card', { token, code: currentRoom });
 }
-
 function sayUno() { socket.emit('say_uno', { token, code: currentRoom }); }
 function challengeUno(targetSid) { socket.emit('challenge_uno', { token, code: currentRoom, targetSid }); }
 
@@ -300,12 +325,19 @@ function sendChat() {
 }
 function appendChat({ username, avatar, msg }) {
   ['chat-msgs','room-chat-msgs'].forEach(id => {
-    const c = document.getElementById(id);
-    if (!c) return;
+    const c = document.getElementById(id); if (!c) return;
     const d = document.createElement('div'); d.className = 'c-msg';
-    d.innerHTML = `<span class="c-nm">${avatar||'🎴'} ${username}</span><span style="font-size:.78rem">${esc(msg)}</span>`;
+    d.innerHTML = `<span class="c-nm">${avatar||'🎴'} ${username}</span><span style="font-size:.76rem">${esc(msg)}</span>`;
     c.appendChild(d); c.scrollTop = c.scrollHeight;
   });
+}
+
+// ─── TABS ──────────────────────────────────────────────────────
+function showTab(t) {
+  document.getElementById('panel-chat').classList.toggle('active', t==='chat');
+  document.getElementById('panel-log').classList.toggle('active', t==='log');
+  document.getElementById('btn-chat').classList.toggle('active', t==='chat');
+  document.getElementById('btn-log').classList.toggle('active', t==='log');
 }
 
 // ─── END ───────────────────────────────────────────────────────
@@ -328,15 +360,6 @@ function endReplay() {
   endShown = false;
 }
 
-// ─── NOTIF ─────────────────────────────────────────────────────
-function showNotif(title, body, ico='🎴') {
-  document.getElementById('notif-ico').textContent = ico;
-  document.getElementById('notif-title').textContent = title;
-  document.getElementById('notif-body').textContent = body;
-  document.getElementById('notif-overlay').classList.remove('hidden');
-}
-function closeNotif() { document.getElementById('notif-overlay').classList.add('hidden'); }
-
 // ─── UTILS ─────────────────────────────────────────────────────
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -344,14 +367,20 @@ function show(id) {
 }
 function setErr(id, msg) {
   const el = document.getElementById(id);
-  if (el) { el.textContent = msg; if (msg) setTimeout(()=>el.textContent='',4000); }
+  if (el) { el.textContent = msg; if (msg) setTimeout(() => el.textContent='', 4000); }
 }
 function showErr(msg) {
-  const active = document.querySelector('.screen.active');
-  if (!active) return;
+  const active = document.querySelector('.screen.active'); if (!active) return;
   const e = active.querySelector('.err');
-  if (e) { e.textContent = msg; setTimeout(()=>e.textContent='',4000); }
+  if (e) { e.textContent = msg; setTimeout(() => e.textContent='', 4000); }
 }
+function showNotif(title, body, ico='🎴') {
+  document.getElementById('notif-ico').textContent = ico;
+  document.getElementById('notif-title').textContent = title;
+  document.getElementById('notif-body').textContent = body;
+  document.getElementById('notif-overlay').classList.remove('hidden');
+}
+function closeNotif() { document.getElementById('notif-overlay').classList.add('hidden'); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 init();
