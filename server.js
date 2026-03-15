@@ -156,16 +156,18 @@ class UnoRoom {
 
   state(forSid = null) {
     const players = {};
-    this.playerOrder.forEach((sid, idx) => {
+    // En lobby playerOrder est vide, on utilise tous les joueurs
+    const sids = this.playerOrder.length > 0 ? this.playerOrder : Object.keys(this.players);
+    sids.forEach(sid => {
       const p = this.players[sid];
       if (!p) return;
       players[sid] = {
         username: p.username, avatar: p.avatar,
-        handCount: p.hand.length, connected: p.connected,
+        handCount: p.hand ? p.hand.length : 0, connected: p.connected,
         isHost: p.username === this.host,
         isCurrent: sid === this.currentSid(),
-        saidUno: p.saidUno,
-        hand: forSid === sid ? p.hand : null, // only your own hand
+        saidUno: p.saidUno || false,
+        hand: forSid === sid ? p.hand : null,
       };
     });
     return {
