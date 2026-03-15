@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>🎴 UNO Online</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css"/>
@@ -10,10 +10,8 @@
 <body>
 <div class="bg-animated"></div>
 <div class="bg-circles">
-  <div class="circle c1"></div>
-  <div class="circle c2"></div>
-  <div class="circle c3"></div>
-  <div class="circle c4"></div>
+  <div class="circle c1"></div><div class="circle c2"></div>
+  <div class="circle c3"></div><div class="circle c4"></div>
 </div>
 
 <!-- AUTH -->
@@ -50,19 +48,11 @@
 <div id="s-menu" class="screen">
   <div class="card menu-card">
     <div class="user-pill"><span id="my-avatar">🎴</span><span id="my-name">---</span></div>
-    <div class="uno-logo" style="font-size:3rem;margin-bottom:.5rem">UNO</div>
-    <p style="color:var(--muted);margin-bottom:1.5rem;font-size:.9rem">Prêt à jouer ?</p>
+    <div class="uno-logo" style="font-size:3rem;margin-bottom:.4rem">UNO</div>
+    <p style="color:var(--muted);margin-bottom:1.4rem;font-size:.88rem">Prêt à jouer ?</p>
     <div class="menu-grid">
-      <div class="menu-item" onclick="createRoom()">
-        <span class="menu-ico">🏠</span>
-        <div class="menu-label">Créer un salon</div>
-        <div class="menu-sub">Invitez vos amis</div>
-      </div>
-      <div class="menu-item" onclick="toggleJoin()">
-        <span class="menu-ico">🚪</span>
-        <div class="menu-label">Rejoindre</div>
-        <div class="menu-sub">Entrez le code</div>
-      </div>
+      <div class="menu-item" onclick="createRoom()"><span class="menu-ico">🏠</span><div class="menu-label">Créer</div><div class="menu-sub">Invitez vos amis</div></div>
+      <div class="menu-item" onclick="toggleJoin()"><span class="menu-ico">🚪</span><div class="menu-label">Rejoindre</div><div class="menu-sub">Entrez le code</div></div>
     </div>
     <div id="join-box" class="join-box hidden">
       <input id="join-code" type="text" placeholder="CODE" maxlength="6" style="text-transform:uppercase"/>
@@ -85,25 +75,23 @@
       <button class="btn-ghost sm" onclick="leaveRoom()">Quitter ×</button>
     </div>
     <div class="players-wrap" id="players-wrap"></div>
-    <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-bottom:.7rem">
+    <div style="display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-bottom:.8rem">
       <span id="player-count">0/8 joueurs</span>
       <span>Min. 2 joueurs</span>
     </div>
     <button class="btn-main" id="start-btn" onclick="startGame()" style="display:none">🎴 Lancer la partie !</button>
     <div id="room-err" class="err"></div>
-    <!-- Règles -->
     <div style="margin-top:1rem">
-      <h3 style="font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem">📖 Rappel des règles</h3>
+      <h3 style="font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem">📖 Règles rapides</h3>
       <div class="rules-grid">
-        <div class="rule-chip">🔴🟡🟢🔵<br><span>Jouez une carte de même couleur ou valeur</span></div>
-        <div class="rule-chip">⏭️ Passe<br><span>Le joueur suivant passe son tour</span></div>
-        <div class="rule-chip">🔄 Inversion<br><span>Inverse le sens du jeu</span></div>
-        <div class="rule-chip">+2 / +4<br><span>Le suivant pioche (cumulable !)</span></div>
-        <div class="rule-chip">🌈 Joker<br><span>Choisissez n'importe quelle couleur</span></div>
-        <div class="rule-chip">🗣️ UNO !<br><span>Criez UNO quand il vous reste 1 carte !</span></div>
+        <div class="rule-chip">🎨 Même couleur ou valeur pour jouer</div>
+        <div class="rule-chip">⏭️ Passe = joueur suivant passe</div>
+        <div class="rule-chip">🔄 Inversion = sens du jeu inversé</div>
+        <div class="rule-chip">+2/+4 = pioche cumulable !</div>
+        <div class="rule-chip">🌈 Joker = choisis n'importe quelle couleur</div>
+        <div class="rule-chip">🗣️ Crie UNO quand il te reste 1 carte !</div>
       </div>
     </div>
-    <!-- Chat salon -->
     <div class="chat-box" style="margin-top:1rem">
       <div class="chat-head">💬 Chat du salon</div>
       <div class="chat-msgs" id="room-chat-msgs"></div>
@@ -117,78 +105,86 @@
 
 <!-- JEU -->
 <div id="s-game" class="screen">
-  <div class="game-layout">
-    <!-- Header -->
-    <div class="game-header">
-      <div class="game-info">
-        <span id="g-direction">↻ Sens normal</span>
-        <span id="g-color-indicator"></span>
-        <span id="g-draw-pending" style="display:none"></span>
+  <div class="game-wrap">
+
+    <!-- BARRE DU HAUT -->
+    <div class="game-top-bar">
+      <div id="g-color-banner" class="color-banner">
+        <span id="g-color-dot" class="color-dot"></span>
+        <span id="g-color-name">---</span>
       </div>
-      <div style="display:flex;gap:.5rem;align-items:center">
+      <div id="g-draw-alert" class="draw-alert hidden">⚠️ <span id="g-draw-num"></span> cartes à piocher !</div>
+      <div style="display:flex;gap:.4rem;align-items:center">
+        <span id="g-direction" style="font-size:.72rem;color:rgba(255,255,255,.5)">↻</span>
         <button class="music-btn" onclick="toggleMusic()" id="music-btn">🔊</button>
-        <button class="btn-ghost sm" onclick="leaveRoom()">Quitter</button>
+        <button class="btn-ghost sm" onclick="leaveRoom()">✕</button>
       </div>
     </div>
 
-    <!-- Autres joueurs -->
+    <!-- AUTRES JOUEURS -->
     <div class="other-players" id="other-players"></div>
 
-    <!-- Zone de jeu centrale -->
+    <!-- ZONE CENTRALE : DECK + DEFAUSSE -->
     <div class="play-zone">
-      <div class="deck-area">
-        <div class="deck-pile" id="deck-pile" onclick="drawCard()">
-          <div class="card-back">🎴</div>
-          <div class="deck-count" id="deck-count">52</div>
-        </div>
-        <div class="discard-pile" id="discard-pile"></div>
+      <div class="deck-pile" id="deck-pile" onclick="drawCard()">
+        <div class="card-back">🎴</div>
+        <div class="deck-count" id="deck-count">--</div>
       </div>
-      <div class="turn-indicator" id="turn-indicator">En attente...</div>
+      <div class="discard-area">
+        <div class="discard-pile" id="discard-pile"></div>
+        <div class="discard-label" id="discard-label"></div>
+      </div>
     </div>
 
-    <!-- Bouton UNO -->
-    <div class="uno-btn-wrap">
-      <button class="uno-btn" id="uno-btn" onclick="sayUno()">UNO!</button>
+    <!-- INDICATEUR DE TOUR -->
+    <div class="turn-bar" id="turn-bar">En attente...</div>
+
+    <!-- BOUTON UNO -->
+    <div style="display:flex;justify-content:center">
+      <button class="uno-btn" onclick="sayUno()">UNO !</button>
     </div>
 
-    <!-- Ma main -->
+    <!-- MA MAIN -->
     <div class="my-hand-section">
-      <div class="my-hand-label">Ta main (<span id="hand-count">0</span> cartes)</div>
+      <div class="my-hand-label">🃏 Ta main — <span id="hand-count">0</span> cartes</div>
       <div class="my-hand" id="my-hand"></div>
     </div>
 
-    <!-- Chat + Log -->
-    <div class="bottom-section">
-      <div class="chat-box">
-        <div class="chat-head">💬 Chat</div>
+    <!-- TOGGLE CHAT/LOG -->
+    <div class="bottom-toggle">
+      <button class="toggle-btn active" id="btn-chat" onclick="showTab('chat')">💬 Chat</button>
+      <button class="toggle-btn" id="btn-log" onclick="showTab('log')">📜 Journal</button>
+    </div>
+    <div class="bottom-panel">
+      <div id="panel-chat" class="panel active">
         <div class="chat-msgs" id="chat-msgs"></div>
         <div class="chat-row">
           <input id="chat-in" type="text" placeholder="Message..." maxlength="200"/>
           <button onclick="sendChat()">➤</button>
         </div>
       </div>
-      <div class="log-box">
-        <div class="chat-head">📜 Journal</div>
+      <div id="panel-log" class="panel">
         <div id="log-list"></div>
       </div>
     </div>
+
   </div>
 </div>
 
 <!-- COLOR PICKER -->
 <div id="color-picker" class="color-picker hidden">
   <div class="color-picker-card">
-    <div style="font-family:'Fredoka One';font-size:1.1rem;margin-bottom:1rem">Choisissez une couleur</div>
+    <div class="color-picker-title">🌈 Choisissez une couleur</div>
     <div class="color-choices">
-      <button class="color-choice red" onclick="chooseColor('red')">Rouge</button>
-      <button class="color-choice green" onclick="chooseColor('green')">Vert</button>
-      <button class="color-choice blue" onclick="chooseColor('blue')">Bleu</button>
-      <button class="color-choice yellow" onclick="chooseColor('yellow')">Jaune</button>
+      <button class="color-choice red" onclick="chooseColor('red')">🔴 Rouge</button>
+      <button class="color-choice green" onclick="chooseColor('green')">🟢 Vert</button>
+      <button class="color-choice blue" onclick="chooseColor('blue')">🔵 Bleu</button>
+      <button class="color-choice yellow" onclick="chooseColor('yellow')">🟡 Jaune</button>
     </div>
   </div>
 </div>
 
-<!-- END OVERLAY -->
+<!-- END -->
 <div id="end-overlay" class="end-overlay hidden">
   <div class="end-card">
     <div class="end-ico" id="end-ico">🏆</div>
