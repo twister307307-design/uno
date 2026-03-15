@@ -152,10 +152,11 @@ function sendRoomChat() {
   socket.emit('chat', { token, code: currentRoom, msg }); el.value = '';
 }
 
+// ─── STATE ─────────────────────────────────────────────────────
 function onState(st) {
   gs = st;
-  mySid = socket.id;
-  let sid = st.players[mySid] ? mySid : Object.keys(st.players).find(k => st.players[k].username === myUsername);
+  mySid = mySid || socket.id;
+  const sid = gs.players[mySid] ? mySid : Object.keys(gs.players).find(k => gs.players[k].username === myUsername);
 
   if (st.phase === 'lobby') { show('s-room'); renderRoom(st, sid); return; }
   show('s-game'); playMusic('game'); renderGame(st, sid);
@@ -163,21 +164,21 @@ function onState(st) {
   if (st.phase === 'finished' && !endShown) {
     endShown = true;
     const isWin = st.winner === myUsername;
-    showEnd(isWin ? '🏆 VICTOIRE !' : '😢 Défaite...', isWin ? 'Tu as gagné ! Bravo champion ! 🎉' : `${st.winner} a gagné cette partie.`, isWin ? '🏆' : '🃏', st.players[sid]?.isHost);
+    showEnd(isWin ? '🏆 VICTOIRE !' : '😢 Défaite...', isWin ? `Tu as gagné ! Bravo champion ! 🎉` : `${st.winner} a gagné cette partie.`, isWin ? '🏆' : '🃏', gs.players[sid]?.isHost);
   }
   if (st.phase !== 'finished') endShown = false;
 }
 
 function renderRoom(st, sid) {
-  const { players } = st;
-  const allPlayers = Object.entries(players).filter(([,p]) => p);
+  const { players, playerOrder } = st;
+  const allPlayers = playerOrder?.length ? playerOrder.map(s => [s, players[s]]).filter(([,p])=>p) : Object.entries(players);
   document.getElementById('players-wrap').innerHTML = allPlayers.map(([,p]) =>
     `<div class="p-card ${p.isHost?'host':''}">
       <span class="p-av">${p.avatar||'🎴'}</span>
       <div class="p-nm">${p.username}</div>
       ${p.isHost?'<span class="p-badge">HÔTE</span>':''}
     </div>`).join('');
-  const cnt = allPlayers.length;
+  const cnt = Object.keys(players).length;
   document.getElementById('player-count').textContent = `${cnt}/8 joueurs`;
   const isHost = players[sid]?.isHost;
   const btn = document.getElementById('start-btn');
